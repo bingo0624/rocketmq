@@ -54,7 +54,9 @@ public class NamesrvStartup {
     public static NamesrvController main0(String[] args) {
 
         try {
+            // 创建 namesrv 控制器对象
             NamesrvController controller = createNamesrvController(args);
+            // 启动控制器对象
             start(controller);
             String tip = "The Name Server boot success. serializeType=" + RemotingCommand.getSerializeTypeConfigInThisServer();
             log.info(tip);
@@ -79,9 +81,14 @@ public class NamesrvStartup {
             return null;
         }
 
+        // 创建namesrv配置对象
         final NamesrvConfig namesrvConfig = new NamesrvConfig();
+        // 创建nettyServer(netty服务端)配置对象
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
+        // 设置默认监听的端口: 9876
         nettyServerConfig.setListenPort(9876);
+
+        // 读取命令行配置，以流的方式加载到properties中，获取相应对象的set属性，将properties中的值反射赋值给对象
         if (commandLine.hasOption('c')) {
             String file = commandLine.getOptionValue('c');
             if (file != null) {
@@ -90,7 +97,7 @@ public class NamesrvStartup {
                 properties.load(in);
                 MixAll.properties2Object(properties, namesrvConfig);
                 MixAll.properties2Object(properties, nettyServerConfig);
-
+                // 设置配置的存储路径
                 namesrvConfig.setConfigStorePath(file);
 
                 System.out.printf("load config properties file OK, %s%n", file);
@@ -98,19 +105,23 @@ public class NamesrvStartup {
             }
         }
 
+        // 反射检查一下字段信息，不影响流程，没啥用
         if (commandLine.hasOption('p')) {
             MixAll.printObjectProperties(null, namesrvConfig);
             MixAll.printObjectProperties(null, nettyServerConfig);
             System.exit(0);
         }
 
+        // 将namesrvConfig中的属性，获取set方法，看命令行是否存在，存在则反射调用方法进行赋值到namesrvConfig对象中
         MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), namesrvConfig);
 
+        //校验rocketmqHome配置，没有配置则退出程序
         if (null == namesrvConfig.getRocketmqHome()) {
             System.out.printf("Please set the %s variable in your environment to match the location of the RocketMQ installation%n", MixAll.ROCKETMQ_HOME_ENV);
             System.exit(-2);
         }
 
+        // 日志工厂创建日志上下文对象，并创建配置对象，从指定目录中读取加载log.xml配置文件
         LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
         JoranConfigurator configurator = new JoranConfigurator();
         configurator.setContext(lc);
@@ -119,12 +130,15 @@ public class NamesrvStartup {
 
         log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
 
+        // 日志文件中输出以下对象: 属性名 = 属性值
         MixAll.printObjectProperties(log, namesrvConfig);
         MixAll.printObjectProperties(log, nettyServerConfig);
 
+        // 创建namesrv控制器对象
         final NamesrvController controller = new NamesrvController(namesrvConfig, nettyServerConfig);
 
         // remember all configs to prevent discard
+        // 将读取命令行转换成properties的配置，注册到 NamesrcCotroller 配置属性中存储
         controller.getConfiguration().registerConfig(properties);
 
         return controller;
@@ -135,13 +149,16 @@ public class NamesrvStartup {
         if (null == controller) {
             throw new IllegalArgumentException("NamesrvController is null");
         }
-
+        // 控制器初始化
         boolean initResult = controller.initialize();
+
+        // 初始化不成功则关闭退出程序
         if (!initResult) {
             controller.shutdown();
             System.exit(-3);
         }
 
+        // 添加钩子方法，打印日志 并 优雅关闭相关资源对象
         Runtime.getRuntime().addShutdownHook(new ShutdownHookThread(log, new Callable<Void>() {
             @Override
             public Void call() throws Exception {
@@ -150,6 +167,7 @@ public class NamesrvStartup {
             }
         }));
 
+        // 启动控制器
         controller.start();
 
         return controller;

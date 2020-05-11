@@ -44,14 +44,17 @@ public class KVConfigManager {
     public void load() {
         String content = null;
         try {
+            // 读取 kv 配置路径中的文件，并且转换成 字符串 输出
             content = MixAll.file2String(this.namesrvController.getNamesrvConfig().getKvConfigPath());
         } catch (IOException e) {
             log.warn("Load KV config table exception", e);
         }
         if (content != null) {
+            // 将读取的 内容 转换成 KVConfigSerializeWrapper 对象
             KVConfigSerializeWrapper kvConfigSerializeWrapper =
                 KVConfigSerializeWrapper.fromJson(content, KVConfigSerializeWrapper.class);
             if (null != kvConfigSerializeWrapper) {
+                // 添加配置表到当前 KV配置管理器属性中
                 this.configTable.putAll(kvConfigSerializeWrapper.getConfigTable());
                 log.info("load KV config table OK");
             }

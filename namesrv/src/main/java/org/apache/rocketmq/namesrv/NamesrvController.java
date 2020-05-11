@@ -38,21 +38,30 @@ import org.apache.rocketmq.remoting.netty.NettyServerConfig;
 import org.apache.rocketmq.remoting.netty.TlsSystemConfig;
 import org.apache.rocketmq.srvutil.FileWatchService;
 
-
+// namesrv控制器
 public class NamesrvController {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
 
+    // namesrv配置对象
     private final NamesrvConfig namesrvConfig;
 
+    // netty服务端配置对象
     private final NettyServerConfig nettyServerConfig;
 
+    // 单线程周期执行器
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
         "NSScheduledThread"));
+
+    // KV 配置管理器
     private final KVConfigManager kvConfigManager;
+
+    // 路由信息管理器
     private final RouteInfoManager routeInfoManager;
 
+    // Netty 远程服务
     private RemotingServer remotingServer;
 
+    // Broker服务管家,提供接口，剔除相关频道关闭的broker节点相关信息
     private BrokerHousekeepingService brokerHousekeepingService;
 
     private ExecutorService remotingExecutor;
@@ -63,9 +72,9 @@ public class NamesrvController {
     public NamesrvController(NamesrvConfig namesrvConfig, NettyServerConfig nettyServerConfig) {
         this.namesrvConfig = namesrvConfig;
         this.nettyServerConfig = nettyServerConfig;
-        this.kvConfigManager = new KVConfigManager(this);
-        this.routeInfoManager = new RouteInfoManager();
-        this.brokerHousekeepingService = new BrokerHousekeepingService(this);
+        this.kvConfigManager = new KVConfigManager(this); // KV 配置管理对象
+        this.routeInfoManager = new RouteInfoManager(); // 路由信息管理器，用于管理 broker、namesrv 等信息
+        this.brokerHousekeepingService = new BrokerHousekeepingService(this); // Broker 服务管家
         this.configuration = new Configuration(
             log,
             this.namesrvConfig, this.nettyServerConfig
@@ -74,16 +83,20 @@ public class NamesrvController {
     }
 
     public boolean initialize() {
-
+        // 加载 kv 配置属性
         this.kvConfigManager.load();
 
+        // 创建 Netty 远程服务
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
 
+        // 创建远程执行器固定线程池(8个线程)
         this.remotingExecutor =
             Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
 
+        // 注册处理器(默认: DefaultRequestProcessor)
         this.registerProcessor();
 
+        // 启动后延时5秒，每10秒执行一次
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -92,6 +105,7 @@ public class NamesrvController {
             }
         }, 5, 10, TimeUnit.SECONDS);
 
+        // 启动后延时1分钟，每10分钟全量在日志中打印一次kv配置
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -100,6 +114,7 @@ public class NamesrvController {
             }
         }, 1, 10, TimeUnit.MINUTES);
 
+        // Tls模式不被禁用时，创建文件观察对象服务，并且初始化监听行为 (Tls安全传输协议)
         if (TlsSystemConfig.tlsMode != TlsMode.DISABLED) {
             // Register a listener to reload SslContext
             try {

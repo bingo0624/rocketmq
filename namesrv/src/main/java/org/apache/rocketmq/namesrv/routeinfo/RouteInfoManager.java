@@ -45,6 +45,9 @@ import org.apache.rocketmq.common.protocol.route.TopicRouteData;
 import org.apache.rocketmq.common.sysflag.TopicSysFlag;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
 
+/**
+ * 路由信息管理器
+ */
 public class RouteInfoManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static long BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
@@ -415,15 +418,21 @@ public class RouteInfoManager {
         return null;
     }
 
+    /**
+     * 扫描不活跃的Broker节点,遍历broker存活表节点:
+     *      最后更新时间超过120s,则关闭broker对应频道，并在注册表中移除关于该broker相关的一切信息
+     */
     public void scanNotActiveBroker() {
         Iterator<Entry<String, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, BrokerLiveInfo> next = it.next();
             long last = next.getValue().getLastUpdateTimestamp();
             if ((last + BROKER_CHANNEL_EXPIRED_TIME) < System.currentTimeMillis()) {
+                // 关闭该broker节点对应的频道
                 RemotingUtil.closeChannel(next.getValue().getChannel());
                 it.remove();
                 log.warn("The broker channel expired, {} {}ms", next.getKey(), BROKER_CHANNEL_EXPIRED_TIME);
+                // 频道销毁(剔除broker相关存储的信息)
                 this.onChannelDestroy(next.getKey(), next.getValue().getChannel());
             }
         }

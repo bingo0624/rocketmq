@@ -28,6 +28,9 @@ import java.util.Properties;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * 配置类: 用于存储一些持久化存储相关的信息
+ */
 public class Configuration {
 
     private final InternalLogger log;

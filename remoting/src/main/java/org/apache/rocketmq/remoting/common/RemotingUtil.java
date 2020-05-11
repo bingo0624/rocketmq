@@ -188,6 +188,9 @@ public class RemotingUtil {
         return null;
     }
 
+    /**
+     * 关闭频道
+     */
     public static void closeChannel(Channel channel) {
         final String addrRemote = RemotingHelper.parseChannelRemoteAddr(channel);
         channel.close().addListener(new ChannelFutureListener() {

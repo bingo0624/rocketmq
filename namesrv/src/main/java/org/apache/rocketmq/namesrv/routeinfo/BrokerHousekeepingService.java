@@ -23,6 +23,10 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.namesrv.NamesrvController;
 import org.apache.rocketmq.remoting.ChannelEventListener;
 
+/**
+ * Broker 服务管家:
+ *      用于管理 Netty 监听失效的 broker 信息，并且剔除
+ */
 public class BrokerHousekeepingService implements ChannelEventListener {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final NamesrvController namesrvController;
